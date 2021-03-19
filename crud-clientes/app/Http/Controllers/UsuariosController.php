@@ -113,6 +113,7 @@ class UsuariosController extends Controller
 
     private function getCountUsuarios($filtros = array()) {
         $filtrosValidos = array('idEndereco' => 'e', 'idCidade' => 'c', 'idEstado' => 'es');
+        $resp = array();
         if(!empty($filtros)) {
             $query = "SELECT count(u.id) as count_users
             FROM usuarios as u
@@ -131,7 +132,7 @@ class UsuariosController extends Controller
                 $query .= " WHERE ";
                 $query .= implode(' AND ', $where);
             }
-            
+
             $resp = DB::select($query);
         }
         return $resp;
