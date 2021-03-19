@@ -111,6 +111,31 @@ class UsuariosController extends Controller
         return $ok;
     }
 
+    private function getCountUsuarios($filtros = array()) {
+        $filtrosValidos = array('idEndereco' => 'e', 'idCidade' => 'c', 'idEstado' => 'es');
+        if(!empty($filtros)) {
+            $query = "SELECT count(u.id) as count_users
+            FROM usuarios as u
+            INNER JOIN enderecos as e on e.id = u.idEndereco
+            INNER JOIN cidades as c on c.id = e.idEndereco_cidade
+            INNER JOIN estados as es on es.id = e.idEndereco_estado";
+
+            $where = array();
+            foreach ($filtrosValidos as $k => $v) {
+                if((isset($filtros[$k]) && !empty($filtros[$k])) ) {
+                    $where[] = " {$v}.id = {$filtros[$k]}";
+                }
+            }
+
+            if(!empty($where)) {
+                $query .= " WHERE ";
+                $query .= implode(' AND ', $where);
+            }
+            
+            $resp = DB::select($query);
+        }
+        return $resp;
+    }
     /**
      * Display the specified resource.
      *
@@ -119,31 +144,39 @@ class UsuariosController extends Controller
      */
     public function show($campos = array()) {
 
-        // Irá montar um where com os campos que vierem nesse array
-        // então essa var vai servir para que não venha campos desnecessarios
-        $validaCampos = array('id', 'name', 'login', 'created_id', 'updated_id');
-        $query = "SELECT id, name, login, created_at, updated_at, idEndereco FROM usuarios";
-        if(!empty($campos)) {
-            $where = array();
-            foreach ($campos as $key => $value) {
-                if(in_array($key, $validaCampos)) {
-                    $where[] = " {$key} = '$value' ";
+        // se passar o 'campos' = 'count' irá fazer um count de usuarios utilizando
+        // idEndereco, idCidade ou idEstado, ou nenhum dos 3
+        if(isset($campos['campos']) && $campos['campos'] == 'count') {
+            $resp = $this->getCountUsuarios($campos);
+        } else {
+
+            // Irá montar um where com os campos que vierem nesse array
+            // então essa var vai servir para que não venha campos desnecessarios
+            $validaCampos = array('id', 'name', 'login', 'created_id', 'updated_id');
+            $query = "SELECT id, name, login, created_at, updated_at, idEndereco FROM usuarios";
+            if(!empty($campos)) {
+                $where = array();
+                foreach ($campos as $key => $value) {
+                    if(in_array($key, $validaCampos)) {
+                        $where[] = " {$key} = '$value' ";
+                    }
+                }
+                if(!empty($where)) {
+                    $query .= " WHERE ";
+                    $query .= implode(' AND ', $where);
                 }
             }
-            if(!empty($where)) {
-                $query .= " WHERE ";
-                $query .= implode(' AND ', $where);
-            }
-        }
 
-        $resp = DB::select($query);
-        $endereco = new EnderecosController();
+            $resp = DB::select($query);
+            $endereco = new EnderecosController();
 
-        foreach ($resp as $k => $value) {
-            if(!empty($value->idEndereco)) {
-                $data = $endereco->show(['id' => $value->idEndereco]);
-                $resp[$k]->endereco[] = $data['data'];
+            foreach ($resp as $k => $value) {
+                if(!empty($value->idEndereco)) {
+                    $data = $endereco->show(['id' => $value->idEndereco]);
+                    $resp[$k]->endereco[] = $data['data'];
+                }
             }
+
         }
 
 
